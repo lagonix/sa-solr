@@ -1,28 +1,38 @@
 ---
 
   - name: SOLR | Check if is present
-    command: "test -x /opt/solr-{{solr_version}}/bin"
-    ignore_errors: yes
+    stat:
+      path: "/opt/solr-{{solr_version}}/bin"
     register: solr_present
 
   - name: SOLR | Ensure SOLR download dir exists
-    file: path="{{solr_download_dir}}" state=directory
-    when: solr_present | failed
+    stat:
+      path: "{{solr_download_dir}}"
+    register: solr_result
+    failed_when: solr_result.isdir is not defined
+    when: solr_present is failed
 
   - name: SOLR | Download distribution
     get_url: url="https://archive.apache.org/dist/lucene/solr/{{solr_version}}/solr-{{solr_version}}.tgz" dest="{{solr_download_dir}}/solr-{{solr_version}}.tgz"
-    when: solr_present | failed
+    register: solr_download
+    failed_when: solr_download is failed
+    when: solr_present is failed
 
   - name: SOLR | Unpack wizard shell script
     shell: "tar xzf solr-{{solr_version}}.tgz solr-{{solr_version}}/bin/install_solr_service.sh --strip-components=2"
     args:
       chdir: "{{solr_download_dir}}"
-    when: solr_present | failed
+      warn: False
+    register: solr_result
+    failed_when: solr_result.rc != 0
+    when: solr_present is failed
 
   - name: SOLR | Execute magic wizard
     shell: "./install_solr_service.sh solr-{{solr_version}}.tgz -f -d {{solr_files_path}} -i {{solr_install_path}} -p {{solr_port}} -s {{solr_service}} -u {{solr_user}}"
     args:
       chdir: "{{solr_download_dir}}"
     become: yes
-    when: solr_present | failed
     ignore_errors: docker_test is defined
+    register: solr_result
+    failed_when: solr_result.rc != 0
+    when: solr_present is failed
