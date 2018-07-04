@@ -1,7 +1,7 @@
 ---
   - name: SOLR | Check if is present
     stat:
-      path: "/opt/solr-{{solr_version}}/bin"
+      path: "{{solr_install_path}}/solr-{{solr_version}}/bin"
     register: solr_present
 
   - name: SOLR | Ensure SOLR download dir exists
